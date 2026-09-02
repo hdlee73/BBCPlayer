@@ -22,10 +22,11 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import org.json.JSONArray
 import org.xmlpull.v1.XmlPullParser
 import java.net.HttpURLConnection
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     private lateinit var player: ExoPlayer
@@ -35,40 +36,30 @@ class MainActivity : AppCompatActivity() {
     private lateinit var seekBar: RepeatSeekBar
     private lateinit var timeText: TextView
     private lateinit var fileName: TextView
-    private lateinit var playlistStatus: TextView
     private lateinit var repeatStatus: TextView
     private lateinit var bookmarkStatus: TextView
     private lateinit var bookmarkButtons: List<Button>
     private val handler = Handler(Looper.getMainLooper())
     private val prefs by lazy { getSharedPreferences("bbc_player", MODE_PRIVATE) }
-    private val playlist = mutableListOf<Uri>()
+    private var currentUri: Uri? = null
     private val bookmarks = LongArray(3) { -1L }
-    private var currentIndex = 0
     private var seekStepMs = 10_000L
     private var repeatStartMs = -1L
     private var repeatEndMs = -1L
     private var repeatMode = 0
     private var repeatLimit = 1
     private var fileRepeatsDone = 0
-    private var playlistCyclesDone = 0
 
     private val openSingleAudio = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let { replacePlaylist(listOf(it)) }
+        uri?.let { openAudio(it) }
     }
 
-    private val createPlaylist = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        if (uris.isNotEmpty()) {
-            replacePlaylist(uris)
-        }
-    }
-
-    private fun replacePlaylist(uris: List<Uri>) {
-        uris.forEach { uri ->
-            try { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-            catch (_: Exception) {}
-        }
-        playlist.clear(); playlist.addAll(uris); currentIndex = 0
-        clearFileLearningState(); savePlaylist(); loadCurrent(0L)
+    private fun openAudio(uri: Uri) {
+        try { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        catch (_: Exception) {}
+        currentUri = uri
+        clearFileLearningState()
+        loadCurrent(0L)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -82,7 +73,7 @@ class MainActivity : AppCompatActivity() {
         configureRepeatRangeControls()
         configureBookmarks()
         findViewById<Button>(R.id.bbcButton).setOnClickListener { fetchLatestBbcEpisode() }
-        if (playlist.isNotEmpty()) loadCurrent(prefs.getLong("last_position", 0L))
+        if (currentUri != null) loadCurrent(prefs.getLong("last_position", 0L))
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 playButton.text = if (isPlaying) "일시정지" else "재생"
@@ -101,7 +92,6 @@ class MainActivity : AppCompatActivity() {
         seekBar = findViewById(R.id.seekBar)
         timeText = findViewById(R.id.timeText)
         fileName = findViewById(R.id.fileName)
-        playlistStatus = findViewById(R.id.playlistStatus)
         repeatStatus = findViewById(R.id.repeatStatus)
         bookmarkStatus = findViewById(R.id.bookmarkStatus)
         bookmarkButtons = listOf(findViewById(R.id.bookmark1Button), findViewById(R.id.bookmark2Button), findViewById(R.id.bookmark3Button))
@@ -114,28 +104,15 @@ class MainActivity : AppCompatActivity() {
         repeatMode = prefs.getInt("repeat_mode", 0)
         repeatLimit = prefs.getInt("repeat_limit", 1)
         repeat(3) { bookmarks[it] = prefs.getLong("bookmark_" + it, -1L) }
-        val saved = prefs.getString("playlist", null)
-        if (saved != null) {
-            runCatching {
-                val array = JSONArray(saved)
-                repeat(array.length()) { playlist.add(Uri.parse(array.getString(it))) }
-            }
-        } else prefs.getString("last_uri", null)?.let { playlist.add(Uri.parse(it)) }
-        currentIndex = prefs.getInt("playlist_index", 0).coerceIn(0, (playlist.size - 1).coerceAtLeast(0))
+        prefs.getString("last_uri", null)?.let { currentUri = Uri.parse(it) }
         updateLabels()
         updateSeekButtonLabels()
     }
 
     private fun configurePlaybackControls() {
         findViewById<Button>(R.id.openButton).setOnClickListener { openSingleAudio.launch(arrayOf("audio/*")) }
-        findViewById<Button>(R.id.createPlaylistButton).setOnClickListener {
-            toast("재생할 파일을 여러 개 선택하세요.")
-            createPlaylist.launch(arrayOf("audio/*"))
-        }
-        findViewById<Button>(R.id.previousFileButton).setOnClickListener { moveFile(-1) }
-        findViewById<Button>(R.id.nextFileButton).setOnClickListener { moveFile(1) }
         playButton.setOnClickListener {
-            if (playlist.isEmpty()) toast("먼저 오디오 파일을 열어 주세요.")
+            if (currentUri == null) toast("먼저 오디오 파일을 열어 주세요.")
             else if (player.isPlaying) player.pause() else player.play()
         }
         backButton.setOnClickListener { player.seekTo((player.currentPosition - seekStepMs).coerceAtLeast(0)) }
@@ -164,8 +141,9 @@ class MainActivity : AppCompatActivity() {
             prefs.edit().putLong("seek_step", seekStepMs).apply()
             updateSeekButtonLabels()
         }
-        val modes = listOf("반복 끔", "파일 반복", "목록 반복")
-        setSpinner(R.id.repeatModeSpinner, modes, modes[repeatMode.coerceIn(0, 2)]) { value ->
+        val modes = listOf("반복 끔", "파일 반복")
+        repeatMode = repeatMode.coerceIn(0, 1)
+        setSpinner(R.id.repeatModeSpinner, modes, modes[repeatMode]) { value ->
             repeatMode = modes.indexOf(value)
             resetRepeatCounters()
             prefs.edit().putInt("repeat_mode", repeatMode).apply()
@@ -225,37 +203,17 @@ class MainActivity : AppCompatActivity() {
         when (repeatMode) {
             1 -> if (repeatLimit < 0 || fileRepeatsDone < repeatLimit) {
                 fileRepeatsDone++; player.seekTo(0); player.play()
-            } else { fileRepeatsDone = 0; moveFile(1, true) }
-            2 -> if (currentIndex < playlist.lastIndex) moveFile(1, true)
-            else if (repeatLimit < 0 || playlistCyclesDone < repeatLimit) {
-                playlistCyclesDone++; currentIndex = 0; loadCurrent(0L, true)
-            }
-            else -> if (currentIndex < playlist.lastIndex) moveFile(1, true)
+            } else fileRepeatsDone = 0
         }
     }
 
-    private fun moveFile(direction: Int, autoPlay: Boolean = player.isPlaying) {
-        val next = currentIndex + direction
-        if (next !in playlist.indices) { toast(if (direction < 0) "첫 파일입니다." else "마지막 파일입니다."); return }
-        currentIndex = next
-        resetRepeatCounters()
-        clearFileLearningState()
-        loadCurrent(0L, autoPlay)
-    }
-
     private fun loadCurrent(position: Long, autoPlay: Boolean = false) {
-        if (playlist.isEmpty()) return
-        val uri = playlist[currentIndex]
+        val uri = currentUri ?: return
         player.setMediaItem(MediaItem.fromUri(uri)); player.prepare(); player.seekTo(position)
         if (autoPlay) player.play()
         fileName.text = getDisplayName(uri)
-        prefs.edit().putInt("playlist_index", currentIndex).putString("last_uri", uri.toString()).apply()
+        prefs.edit().putString("last_uri", uri.toString()).apply()
         updateLabels()
-    }
-
-    private fun savePlaylist() {
-        val array = JSONArray(); playlist.forEach { array.put(it.toString()) }
-        prefs.edit().putString("playlist", array.toString()).putInt("playlist_index", currentIndex).apply()
     }
 
     private fun clearFileLearningState() {
@@ -269,7 +227,7 @@ class MainActivity : AppCompatActivity() {
         updateLabels()
     }
 
-    private fun resetRepeatCounters() { fileRepeatsDone = 0; playlistCyclesDone = 0 }
+    private fun resetRepeatCounters() { fileRepeatsDone = 0 }
 
     private fun updateSeekButtonLabels() {
         val seconds = (seekStepMs / 1000).toString()
@@ -277,7 +235,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateLabels() {
-        playlistStatus.text = if (playlist.isEmpty()) "목록 없음" else (currentIndex + 1).toString() + " / " + playlist.size
         repeatStatus.text = when {
             repeatStartMs >= 0 && repeatEndMs >= 0 -> "A " + formatTime(repeatStartMs) + "  ↔  B " + formatTime(repeatEndMs)
             repeatStartMs >= 0 -> "A " + formatTime(repeatStartMs) + "  ·  B 미지정"
@@ -309,17 +266,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun parseFirstEpisode(parser: XmlPullParser): BbcEpisode {
-        var inItem = false; var title = ""; var audioUrl = ""
+        var inItem = false; var title = ""; var audioUrl = ""; var published = ""
         while (parser.eventType != XmlPullParser.END_DOCUMENT) {
             if (parser.eventType == XmlPullParser.START_TAG) when (parser.name) {
                 "item" -> inItem = true
                 "title" -> if (inItem) title = parser.nextText()
+                "pubDate" -> if (inItem) published = parser.nextText()
                 "enclosure" -> if (inItem) audioUrl = parser.getAttributeValue(null, "url") ?: ""
             } else if (parser.eventType == XmlPullParser.END_TAG && parser.name == "item" && inItem) break
             parser.next()
         }
         if (title.isBlank() || audioUrl.isBlank()) error("No episode")
-        return BbcEpisode(title, audioUrl.replaceFirst("http://", "https://"))
+        val inputDate = SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.US).parse(published)
+            ?: error("게시일 없음")
+        val date = SimpleDateFormat("yyyyMMdd", Locale.US).format(inputDate)
+        return BbcEpisode(title, audioUrl.replaceFirst("http://", "https://"), date)
     }
 
     private fun showLatestEpisode(episode: BbcEpisode) {
@@ -329,7 +290,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun downloadEpisode(episode: BbcEpisode) {
-        val fileName = episode.title.replace(Regex("[^A-Za-z0-9가-힣 _-]"), "").take(80).ifBlank { "BBC_6_Minute_English" } + ".mp3"
+        val title = episode.title.replace(Regex("[^A-Za-z0-9가-힣 _-]"), "").trim().take(80).ifBlank { "BBC_6_Minute_English" }
+        val fileName = episode.publishedDate + "_" + title + ".mp3"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) downloadToMediaStore(episode, fileName)
         else {
             val request = DownloadManager.Request(Uri.parse(episode.audioUrl)).setTitle(episode.title)
@@ -348,7 +310,7 @@ class MainActivity : AppCompatActivity() {
                 val values = ContentValues().apply {
                     put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
                     put(MediaStore.MediaColumns.MIME_TYPE, "audio/mpeg")
-                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/HD MP3_Player")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
                     put(MediaStore.MediaColumns.IS_PENDING, 1)
                 }
                 outputUri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: error("저장 위치 오류")
@@ -357,7 +319,7 @@ class MainActivity : AppCompatActivity() {
                 connection.inputStream.use { input -> contentResolver.openOutputStream(outputUri!!, "w")?.use { input.copyTo(it) } ?: error("파일 쓰기 오류") }
                 values.clear(); values.put(MediaStore.MediaColumns.IS_PENDING, 0); contentResolver.update(outputUri!!, values, null, null)
                 connection.disconnect()
-                runOnUiThread { toast("다운로드 완료: Download/HD MP3_Player") }
+                runOnUiThread { toast("다운로드 완료: Download/" + fileName) }
             } catch (error: Exception) {
                 outputUri?.let { contentResolver.delete(it, null, null) }
                 runOnUiThread {
@@ -429,7 +391,7 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-private data class BbcEpisode(val title: String, val audioUrl: String)
+private data class BbcEpisode(val title: String, val audioUrl: String, val publishedDate: String)
 
 private class SimpleItemSelectedListener(private val selected: (Int) -> Unit) : AdapterView.OnItemSelectedListener {
     override fun onItemSelected(parent: AdapterView<*>?, view: android.view.View?, position: Int, id: Long) = selected(position)
