@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
         android:allowBackup="true"
-        android:label="BBC Player"
+        android:label="HD MP3_Player"
         android:theme="@style/Theme.BBCPlayer">
         <activity
             android:name=".MainActivity"

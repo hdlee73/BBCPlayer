@@ -1,3 +1,10 @@
 <resources>
-    <style name="Theme.BBCPlayer" parent="Theme.Material3.DayNight.NoActionBar" />
+    <style name="Theme.BBCPlayer" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowBackground">@color/navy_950</item>
+        <item name="android:colorAccent">@color/blue_500</item>
+        <item name="android:statusBarColor">@color/navy_950</item>
+        <item name="android:navigationBarColor">@color/navy_950</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
 </resources>
