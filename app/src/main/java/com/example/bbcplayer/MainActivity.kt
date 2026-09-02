@@ -98,8 +98,7 @@ class MainActivity : AppCompatActivity() {
         if (library.isEmpty()) { toast("기기에서 오디오 파일을 찾지 못했습니다."); return }
         val folders = library.keys.sorted()
         AlertDialog.Builder(this)
-            .setTitle("🎧  오디오 폴더")
-            .setMessage("재생할 파일이 들어 있는 폴더를 선택하세요.")
+            .setTitle("🎧  오디오 폴더 선택")
             .setItems(folders.toTypedArray()) { _, index -> showTrackPicker(folders[index], library.getValue(folders[index])) }
             .setNegativeButton("취소", null).show()
     }
@@ -108,8 +107,7 @@ class MainActivity : AppCompatActivity() {
         var selected = 0
         val labels = tracks.mapIndexed { index, track -> String.format("%02d   %s", index + 1, track.second) }.toTypedArray()
         val dialog = AlertDialog.Builder(this)
-            .setTitle("🎵  재생할 오디오")
-            .setMessage(folder + "  ·  " + tracks.size + "곡")
+            .setTitle("🎵  " + folder + "  ·  " + tracks.size + "곡")
             .setSingleChoiceItems(labels, selected) { _, index -> selected = index }
             .setNegativeButton("취소", null)
             .setPositiveButton("재생", null)
