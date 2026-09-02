@@ -13,6 +13,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.provider.OpenableColumns
+import android.provider.DocumentsContract
 import android.util.Xml
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
@@ -42,6 +43,8 @@ class MainActivity : AppCompatActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private val prefs by lazy { getSharedPreferences("bbc_player", MODE_PRIVATE) }
     private var currentUri: Uri? = null
+    private val folderTracks = mutableListOf<Pair<Uri, String>>()
+    private var currentTrackIndex = 0
     private val bookmarks = LongArray(3) { -1L }
     private var seekStepMs = 10_000L
     private var repeatStartMs = -1L
@@ -50,8 +53,8 @@ class MainActivity : AppCompatActivity() {
     private var repeatLimit = 1
     private var fileRepeatsDone = 0
 
-    private val openSingleAudio = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let { openAudio(it) }
+    private val openAudioFolder = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        uri?.let { openFolder(it, true) }
     }
 
     private fun openAudio(uri: Uri) {
@@ -60,6 +63,39 @@ class MainActivity : AppCompatActivity() {
         currentUri = uri
         clearFileLearningState()
         loadCurrent(0L)
+    }
+
+    private fun openFolder(treeUri: Uri, showPicker: Boolean) {
+        try { contentResolver.takePersistableUriPermission(treeUri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        catch (_: Exception) {}
+        val parentId = DocumentsContract.getTreeDocumentId(treeUri)
+        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentId)
+        val projection = arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME, DocumentsContract.Document.COLUMN_MIME_TYPE)
+        val found = mutableListOf<Pair<Uri, String>>()
+        contentResolver.query(childrenUri, projection, null, null, DocumentsContract.Document.COLUMN_DISPLAY_NAME)?.use { cursor ->
+            while (cursor.moveToNext()) {
+                val id = cursor.getString(0)
+                val name = cursor.getString(1) ?: "오디오"
+                val mime = cursor.getString(2) ?: ""
+                if (mime.startsWith("audio/") || name.endsWith(".mp3", true) || name.endsWith(".m4a", true)) {
+                    found += DocumentsContract.buildDocumentUriUsingTree(treeUri, id) to name
+                }
+            }
+        }
+        if (found.isEmpty()) { toast("선택한 폴더에 오디오 파일이 없습니다."); return }
+        folderTracks.clear(); folderTracks.addAll(found.sortedBy { it.second.lowercase() })
+        prefs.edit().putString("folder_uri", treeUri.toString()).apply()
+        if (showPicker) {
+            AlertDialog.Builder(this).setTitle("재생할 오디오 선택")
+                .setItems(folderTracks.map { it.second }.toTypedArray()) { _, index ->
+                    currentTrackIndex = index
+                    openAudio(folderTracks[index].first)
+                }.setNegativeButton("취소", null).show()
+        } else {
+            val saved = prefs.getString("last_uri", null)
+            currentTrackIndex = folderTracks.indexOfFirst { it.first.toString() == saved }.coerceAtLeast(0)
+            currentUri = folderTracks[currentTrackIndex].first
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -104,13 +140,16 @@ class MainActivity : AppCompatActivity() {
         repeatMode = prefs.getInt("repeat_mode", 0)
         repeatLimit = prefs.getInt("repeat_limit", 1)
         repeat(3) { bookmarks[it] = prefs.getLong("bookmark_" + it, -1L) }
-        prefs.getString("last_uri", null)?.let { currentUri = Uri.parse(it) }
+        prefs.getString("folder_uri", null)?.let { runCatching { openFolder(Uri.parse(it), false) } }
+        if (currentUri == null) prefs.getString("last_uri", null)?.let { currentUri = Uri.parse(it) }
         updateLabels()
         updateSeekButtonLabels()
     }
 
     private fun configurePlaybackControls() {
-        findViewById<Button>(R.id.openButton).setOnClickListener { openSingleAudio.launch(arrayOf("audio/*")) }
+        findViewById<Button>(R.id.openButton).setOnClickListener { openAudioFolder.launch(null) }
+        findViewById<Button>(R.id.previousTrackButton).setOnClickListener { moveTrack(-1) }
+        findViewById<Button>(R.id.nextTrackButton).setOnClickListener { moveTrack(1) }
         playButton.setOnClickListener {
             if (currentUri == null) toast("먼저 오디오 파일을 열어 주세요.")
             else if (player.isPlaying) player.pause() else player.play()
@@ -158,12 +197,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setSpinner(id: Int, values: List<String>, selected: String, changed: (String) -> Unit) {
-        val spinner = findViewById<Spinner>(id)
-        spinner.adapter = ArrayAdapter(this, R.layout.item_spinner, R.id.spinnerText, values).also {
-            it.setDropDownViewResource(R.layout.item_spinner)
+        val button = findViewById<Button>(id)
+        var selectedIndex = values.indexOf(selected).let { if (it >= 0) it else 0 }
+        fun update() { button.text = values[selectedIndex] + "  ▾" }
+        update()
+        button.setOnClickListener {
+            AlertDialog.Builder(this).setSingleChoiceItems(values.toTypedArray(), selectedIndex) { dialog, index ->
+                selectedIndex = index
+                changed(values[index])
+                update()
+                dialog.dismiss()
+            }.show()
         }
-        spinner.setSelection(values.indexOf(selected).let { if (it >= 0) it else 0 })
-        spinner.onItemSelectedListener = SimpleItemSelectedListener { changed(values[it]) }
+    }
+
+    private fun moveTrack(direction: Int) {
+        if (folderTracks.isEmpty()) { toast("먼저 오디오 폴더를 열어 주세요."); return }
+        val next = currentTrackIndex + direction
+        if (next !in folderTracks.indices) { toast(if (direction < 0) "폴더의 첫 곡입니다." else "폴더의 마지막 곡입니다."); return }
+        currentTrackIndex = next
+        currentUri = folderTracks[next].first
+        resetRepeatCounters(); clearFileLearningState(); loadCurrent(0L, true)
     }
 
     private fun configureRepeatRangeControls() {
@@ -397,9 +451,4 @@ class MainActivity : AppCompatActivity() {
 }
 
 private data class BbcEpisode(val title: String, val audioUrl: String, val publishedDate: String)
-
-private class SimpleItemSelectedListener(private val selected: (Int) -> Unit) : AdapterView.OnItemSelectedListener {
-    override fun onItemSelected(parent: AdapterView<*>?, view: android.view.View?, position: Int, id: Long) = selected(position)
-    override fun onNothingSelected(parent: AdapterView<*>?) = Unit
-}
 
