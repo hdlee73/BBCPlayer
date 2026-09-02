@@ -17,72 +17,74 @@
             android:maxLines="1"
             android:text="HD MP3_Player"
             android:textColor="@color/text_primary"
-            android:textSize="24sp"
+            android:textSize="23sp"
             android:textStyle="bold" />
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="1"
-            android:text="집중해서 듣는 나만의 오디오 플레이어"
+            android:text="학습과 오디오북을 위한 플레이어"
             android:textColor="@color/text_secondary"
             android:textSize="12sp" />
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="7dp"
             android:background="@drawable/bg_card"
             android:orientation="vertical"
             android:padding="12dp">
-            <LinearLayout
+            <TextView
+                android:id="@+id/fileName"
                 android:layout_width="match_parent"
-                android:layout_height="62dp"
+                android:layout_height="22dp"
+                android:ellipsize="middle"
                 android:gravity="center_vertical"
-                android:orientation="horizontal">
-                <TextView
-                    android:layout_width="62dp"
-                    android:layout_height="62dp"
-                    android:background="@drawable/bg_artwork"
-                    android:gravity="center"
-                    android:text="♫"
-                    android:textColor="@color/text_primary"
-                    android:textSize="31sp" />
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_marginStart="12dp"
-                    android:layout_weight="1"
-                    android:gravity="center_vertical"
-                    android:orientation="vertical">
-                    <TextView
-                        android:id="@+id/fileName"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:ellipsize="middle"
-                        android:maxLines="1"
-                        android:text="오디오 파일을 선택하세요"
-                        android:textColor="@color/text_primary"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
-                    <TextView
-                        android:id="@+id/timeText"
-                        android:layout_width="match_parent"
-                        android:layout_height="22dp"
-                        android:layout_marginTop="2dp"
-                        android:fontFamily="monospace"
-                        android:gravity="center_vertical"
-                        android:text="00:00 / 00:00"
-                        android:textColor="@color/blue_400"
-                        android:textSize="12sp" />
-                </LinearLayout>
-            </LinearLayout>
-            <SeekBar
+                android:maxLines="1"
+                android:text="오디오 파일을 선택하세요"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/timeText"
+                android:layout_width="match_parent"
+                android:layout_height="20dp"
+                android:fontFamily="monospace"
+                android:gravity="center_vertical"
+                android:text="00:00 / 00:00"
+                android:textColor="@color/blue_400"
+                android:textSize="12sp" />
+            <com.example.bbcplayer.RepeatSeekBar
                 android:id="@+id/seekBar"
                 android:layout_width="match_parent"
                 android:layout_height="30dp"
-                android:layout_marginTop="3dp"
                 android:progressTint="@color/blue_500"
                 android:thumbTint="@color/blue_400" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="34dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+                <Button
+                    android:id="@+id/previousFileButton"
+                    style="@style/MiniButton"
+                    android:contentDescription="이전 파일"
+                    android:text="◀" />
+                <TextView
+                    android:id="@+id/playlistStatus"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="목록 없음"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp" />
+                <Button
+                    android:id="@+id/nextFileButton"
+                    style="@style/MiniButton"
+                    android:contentDescription="다음 파일"
+                    android:text="▶" />
+            </LinearLayout>
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="46dp"
@@ -109,138 +111,97 @@
             </LinearLayout>
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="46dp"
-                android:layout_marginTop="4dp"
+                android:layout_height="42dp"
+                android:layout_marginTop="3dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+                <TextView style="@style/InlineLabel" android:text="속도" />
+                <Spinner
+                    android:id="@+id/speedSpinner"
+                    style="@style/DarkSpinner"
+                    android:layout_width="0dp"
+                    android:layout_weight="1" />
+                <TextView style="@style/InlineLabel" android:layout_marginStart="8dp" android:text="이동" />
+                <Spinner
+                    android:id="@+id/seekStepSpinner"
+                    style="@style/DarkSpinner"
+                    android:layout_width="0dp"
+                    android:layout_weight="1" />
+            </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="39dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
                 <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="속도"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
-                <Spinner
-                    android:id="@+id/speedSpinner"
+                    android:id="@+id/repeatStatus"
                     android:layout_width="0dp"
-                    android:layout_height="44dp"
-                    android:layout_marginStart="4dp"
+                    android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:backgroundTint="@color/blue_400" />
+                    android:ellipsize="end"
+                    android:gravity="center_vertical"
+                    android:maxLines="1"
+                    android:text="A–B 꺼짐"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp" />
+                <Button android:id="@+id/aButton" style="@style/MiniButton" android:contentDescription="A 시작점" android:text="A〔" />
+                <Button android:id="@+id/bButton" style="@style/MiniButton" android:layout_marginStart="4dp" android:contentDescription="B 종료점" android:text="〕B" />
+                <Button android:id="@+id/clearRepeatButton" style="@style/MiniButton" android:layout_marginStart="4dp" android:contentDescription="구간 반복 해제" android:text="↻×" />
+            </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="39dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
                 <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:text="이동"
+                    android:id="@+id/bookmarkStatus"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:gravity="center_vertical"
+                    android:maxLines="1"
+                    android:text="1 --:--  2 --:--  3 --:--"
                     android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
+                    android:textSize="10sp" />
+                <Button android:id="@+id/bookmark1Button" style="@style/MiniButton" android:contentDescription="북마크 1, 길게 눌러 저장" android:text="①" />
+                <Button android:id="@+id/bookmark2Button" style="@style/MiniButton" android:layout_marginStart="4dp" android:contentDescription="북마크 2, 길게 눌러 저장" android:text="②" />
+                <Button android:id="@+id/bookmark3Button" style="@style/MiniButton" android:layout_marginStart="4dp" android:contentDescription="북마크 3, 길게 눌러 저장" android:text="③" />
+            </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+                <TextView style="@style/InlineLabel" android:text="재생 반복" />
                 <Spinner
-                    android:id="@+id/seekStepSpinner"
+                    android:id="@+id/repeatModeSpinner"
+                    style="@style/DarkSpinner"
                     android:layout_width="0dp"
-                    android:layout_height="44dp"
-                    android:layout_marginStart="4dp"
-                    android:layout_weight="1"
-                    android:backgroundTint="@color/blue_400" />
+                    android:layout_weight="1.35" />
+                <Spinner
+                    android:id="@+id/repeatCountSpinner"
+                    style="@style/DarkSpinner"
+                    android:layout_width="0dp"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="0.8" />
             </LinearLayout>
-            <TextView
-                android:id="@+id/repeatStatus"
-                style="@style/CompactStatusText"
-                android:text="↻  구간 반복 꺼짐" />
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="42dp"
-                android:layout_marginTop="2dp"
-                android:orientation="horizontal">
-                <Button
-                    android:id="@+id/aButton"
-                    style="@style/CompactControlButton"
-                    android:layout_width="0dp"
-                    android:layout_height="42dp"
-                    android:layout_weight="1"
-                    android:contentDescription="A 구간 시작점 지정"
-                    android:text="A 〔" />
-                <Button
-                    android:id="@+id/bButton"
-                    style="@style/CompactControlButton"
-                    android:layout_width="0dp"
-                    android:layout_height="42dp"
-                    android:layout_marginHorizontal="5dp"
-                    android:layout_weight="1"
-                    android:contentDescription="B 구간 종료점 지정"
-                    android:text="〕 B" />
-                <Button
-                    android:id="@+id/clearRepeatButton"
-                    style="@style/CompactControlButton"
-                    android:layout_width="0dp"
-                    android:layout_height="42dp"
-                    android:layout_weight="1"
-                    android:contentDescription="구간 반복 해제"
-                    android:text="↻ ×" />
-            </LinearLayout>
-            <TextView
-                android:id="@+id/bookmarkStatus"
-                style="@style/CompactStatusText"
-                android:text="1  --:--     2  --:--     3  --:--" />
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="42dp"
-                android:layout_marginTop="2dp"
-                android:orientation="horizontal">
-                <Button
-                    android:id="@+id/bookmark1Button"
-                    style="@style/CompactControlButton"
-                    android:layout_width="0dp"
-                    android:layout_height="42dp"
-                    android:layout_weight="1"
-                    android:contentDescription="1번 위치, 짧게 눌러 이동하고 길게 눌러 저장"
-                    android:text="①  ♧" />
-                <Button
-                    android:id="@+id/bookmark2Button"
-                    style="@style/CompactControlButton"
-                    android:layout_width="0dp"
-                    android:layout_height="42dp"
-                    android:layout_marginHorizontal="5dp"
-                    android:layout_weight="1"
-                    android:contentDescription="2번 위치, 짧게 눌러 이동하고 길게 눌러 저장"
-                    android:text="②  ♧" />
-                <Button
-                    android:id="@+id/bookmark3Button"
-                    style="@style/CompactControlButton"
-                    android:layout_width="0dp"
-                    android:layout_height="42dp"
-                    android:layout_weight="1"
-                    android:contentDescription="3번 위치, 짧게 눌러 이동하고 길게 눌러 저장"
-                    android:text="③  ♧" />
-            </LinearLayout>
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:text="위치 버튼: 짧게 이동 · 길게 저장"
-                android:textColor="@color/text_secondary"
-                android:textSize="10sp" />
-            <LinearLayout
+            <Button
+                android:id="@+id/openButton"
+                style="@style/CompactPrimaryButton"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:layout_marginTop="6dp"
-                android:orientation="horizontal">
-                <Button
-                    android:id="@+id/openButton"
-                    style="@style/CompactPrimaryButton"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_weight="1"
-                    android:text="파일 열기"
-                    android:textSize="14sp" />
-                <Button
-                    android:id="@+id/bbcButton"
-                    style="@style/CompactPrimaryButton"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_marginStart="6dp"
-                    android:layout_weight="1"
-                    android:text="BBC 최신 MP3"
-                    android:textSize="14sp" />
-            </LinearLayout>
+                android:layout_marginTop="4dp"
+                android:text="파일·플레이리스트 열기"
+                android:textSize="14sp" />
+            <Button
+                android:id="@+id/bbcButton"
+                style="@style/BbcLinkButton"
+                android:layout_width="wrap_content"
+                android:layout_height="34dp"
+                android:layout_gravity="end"
+                android:text="BBC 최신 6 Minute English 받기  ›" />
         </LinearLayout>
     </LinearLayout>
 </ScrollView>
+
