@@ -248,6 +248,7 @@ class MainActivity : AppCompatActivity() {
         }.joinToString("   ")
         bookmarkButtons.forEachIndexed { index, button ->
             val active = bookmarks[index] >= 0
+            button.text = (index + 1).toString() + "  " + if (active) formatTime(bookmarks[index]) else "--:--"
             button.backgroundTintList = ColorStateList.valueOf(getColor(if (active) R.color.favorite_active else R.color.surface_border))
             button.setTextColor(getColor(if (active) android.R.color.white else R.color.text_primary))
         }

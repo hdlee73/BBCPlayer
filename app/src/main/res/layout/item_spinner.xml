@@ -6,7 +6,7 @@
     android:background="@android:color/white"
     android:gravity="center_vertical"
     android:minHeight="40dp"
-    android:paddingHorizontal="12dp"
+    android:paddingHorizontal="6dp"
     android:textColor="@color/text_primary"
-    android:textSize="14sp" />
+    android:textSize="12sp" />
 
