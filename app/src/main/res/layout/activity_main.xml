@@ -10,27 +10,32 @@
         android:gravity="center_vertical"
         android:orientation="vertical"
         android:padding="14dp">
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:text="HD MP3_Player"
-            android:textColor="@color/text_primary"
-            android:textSize="23sp"
-            android:textStyle="bold" />
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:text="학습과 오디오북을 위한 플레이어"
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp" />
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="7dp"
+            android:gravity="bottom"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="HD MP3_Player"
+                android:textColor="@color/text_primary"
+                android:textSize="23sp"
+                android:textStyle="bold" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginBottom="3dp"
+                android:text="(made by 이현덕)"
+                android:textColor="@color/teal_600"
+                android:textSize="10sp"
+                android:textStyle="italic" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="15dp"
             android:background="@drawable/bg_card"
             android:orientation="vertical"
             android:padding="12dp">
@@ -133,6 +138,7 @@
                 android:layout_height="39dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
+                <TextView style="@style/SectionLabel" android:text="구간 반복" />
                 <TextView
                     android:id="@+id/repeatStatus"
                     android:layout_width="0dp"
@@ -141,7 +147,7 @@
                     android:ellipsize="end"
                     android:gravity="center_vertical"
                     android:maxLines="1"
-                    android:text="A–B 꺼짐"
+                    android:text="꺼짐"
                     android:textColor="@color/text_secondary"
                     android:textSize="11sp" />
                 <Button android:id="@+id/aButton" style="@style/MiniButton" android:contentDescription="A 시작점" android:text="A〔" />
@@ -153,6 +159,7 @@
                 android:layout_height="39dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
+                <TextView style="@style/SectionLabel" android:text="즐겨찾기" />
                 <TextView
                     android:id="@+id/bookmarkStatus"
                     android:layout_width="0dp"
@@ -190,15 +197,23 @@
                 android:id="@+id/openButton"
                 style="@style/CompactPrimaryButton"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginTop="4dp"
-                android:text="파일·플레이리스트 열기"
+                android:layout_height="50dp"
+                android:layout_marginTop="6dp"
+                android:text="오디오 파일 열기"
                 android:textSize="14sp" />
+            <Button
+                android:id="@+id/createPlaylistButton"
+                style="@style/SecondaryButton"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:layout_marginTop="5dp"
+                android:text="새 플레이리스트 만들기"
+                android:textSize="13sp" />
             <Button
                 android:id="@+id/bbcButton"
                 style="@style/BbcLinkButton"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
+                android:layout_height="42dp"
                 android:layout_gravity="end"
                 android:text="BBC 최신 6 Minute English 받기  ›" />
         </LinearLayout>

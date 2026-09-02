@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="navy_950">#07111F</color>
-    <color name="navy_900">#0B1729</color>
-    <color name="navy_800">#12233A</color>
-    <color name="blue_500">#4B8DFF</color>
-    <color name="blue_400">#72A7FF</color>
-    <color name="text_primary">#F4F7FC</color>
-    <color name="text_secondary">#A9B7CB</color>
-    <color name="surface_border">#263B56</color>
+    <color name="navy_950">#EAF3F1</color>
+    <color name="navy_900">#F5F9F8</color>
+    <color name="navy_800">#FFFFFF</color>
+    <color name="blue_500">#168C82</color>
+    <color name="blue_400">#168C82</color>
+    <color name="text_primary">#172B2A</color>
+    <color name="text_secondary">#6B7D7A</color>
+    <color name="surface_border">#DCE9E6</color>
+    <color name="favorite_active">#F28C72</color>
+    <color name="mint_100">#DDF1EC</color>
+    <color name="teal_600">#168C82</color>
+    <color name="teal_700">#0C6F67</color>
 </resources>
+

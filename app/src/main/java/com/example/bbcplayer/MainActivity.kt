@@ -2,6 +2,7 @@ package com.example.bbcplayer
 
 import android.app.DownloadManager
 import android.content.ContentValues
+import android.content.res.ColorStateList
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -37,6 +38,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var playlistStatus: TextView
     private lateinit var repeatStatus: TextView
     private lateinit var bookmarkStatus: TextView
+    private lateinit var bookmarkButtons: List<Button>
     private val handler = Handler(Looper.getMainLooper())
     private val prefs by lazy { getSharedPreferences("bbc_player", MODE_PRIVATE) }
     private val playlist = mutableListOf<Uri>()
@@ -50,19 +52,23 @@ class MainActivity : AppCompatActivity() {
     private var fileRepeatsDone = 0
     private var playlistCyclesDone = 0
 
-    private val openAudios = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+    private val openSingleAudio = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let { replacePlaylist(listOf(it)) }
+    }
+
+    private val createPlaylist = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) {
-            uris.forEach { uri ->
-                try { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-                catch (_: Exception) {}
-            }
-            playlist.clear()
-            playlist.addAll(uris)
-            currentIndex = 0
-            clearFileLearningState()
-            savePlaylist()
-            loadCurrent(0L)
+            replacePlaylist(uris)
         }
+    }
+
+    private fun replacePlaylist(uris: List<Uri>) {
+        uris.forEach { uri ->
+            try { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            catch (_: Exception) {}
+        }
+        playlist.clear(); playlist.addAll(uris); currentIndex = 0
+        clearFileLearningState(); savePlaylist(); loadCurrent(0L)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -98,6 +104,7 @@ class MainActivity : AppCompatActivity() {
         playlistStatus = findViewById(R.id.playlistStatus)
         repeatStatus = findViewById(R.id.repeatStatus)
         bookmarkStatus = findViewById(R.id.bookmarkStatus)
+        bookmarkButtons = listOf(findViewById(R.id.bookmark1Button), findViewById(R.id.bookmark2Button), findViewById(R.id.bookmark3Button))
     }
 
     private fun restoreState() {
@@ -120,7 +127,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun configurePlaybackControls() {
-        findViewById<Button>(R.id.openButton).setOnClickListener { openAudios.launch(arrayOf("audio/*")) }
+        findViewById<Button>(R.id.openButton).setOnClickListener { openSingleAudio.launch(arrayOf("audio/*")) }
+        findViewById<Button>(R.id.createPlaylistButton).setOnClickListener {
+            toast("재생할 파일을 여러 개 선택하세요.")
+            createPlaylist.launch(arrayOf("audio/*"))
+        }
         findViewById<Button>(R.id.previousFileButton).setOnClickListener { moveFile(-1) }
         findViewById<Button>(R.id.nextFileButton).setOnClickListener { moveFile(1) }
         playButton.setOnClickListener {
@@ -197,8 +208,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun configureBookmarks() {
-        val buttons = listOf<Button>(findViewById(R.id.bookmark1Button), findViewById(R.id.bookmark2Button), findViewById(R.id.bookmark3Button))
-        buttons.forEachIndexed { slot, button ->
+        bookmarkButtons.forEachIndexed { slot, button ->
             button.setOnClickListener {
                 if (bookmarks[slot] >= 0) player.seekTo(bookmarks[slot])
                 else toast((slot + 1).toString() + "번이 비어 있습니다. 길게 눌러 저장하세요.")
@@ -271,11 +281,16 @@ class MainActivity : AppCompatActivity() {
         repeatStatus.text = when {
             repeatStartMs >= 0 && repeatEndMs >= 0 -> "A " + formatTime(repeatStartMs) + "  ↔  B " + formatTime(repeatEndMs)
             repeatStartMs >= 0 -> "A " + formatTime(repeatStartMs) + "  ·  B 미지정"
-            else -> "A–B 꺼짐"
+            else -> "꺼짐"
         }
         bookmarkStatus.text = bookmarks.mapIndexed { index, value ->
             (index + 1).toString() + " " + if (value >= 0) formatTime(value) else "--:--"
         }.joinToString("   ")
+        bookmarkButtons.forEachIndexed { index, button ->
+            val active = bookmarks[index] >= 0
+            button.backgroundTintList = ColorStateList.valueOf(getColor(if (active) R.color.favorite_active else R.color.surface_border))
+            button.setTextColor(getColor(if (active) android.R.color.white else R.color.text_primary))
+        }
     }
 
     private fun fetchLatestBbcEpisode() {
@@ -337,19 +352,37 @@ class MainActivity : AppCompatActivity() {
                     put(MediaStore.MediaColumns.IS_PENDING, 1)
                 }
                 outputUri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: error("저장 위치 오류")
-                val connection = URL(episode.audioUrl).openConnection() as HttpURLConnection
-                connection.instanceFollowRedirects = true; connection.connectTimeout = 15_000; connection.readTimeout = 30_000
-                connection.setRequestProperty("User-Agent", USER_AGENT)
+                val connection = openBbcAudioConnection(episode.audioUrl)
                 if (connection.responseCode !in 200..299) error("HTTP " + connection.responseCode)
-                connection.inputStream.use { input -> contentResolver.openOutputStream(outputUri!!)?.use { input.copyTo(it) } ?: error("파일 쓰기 오류") }
+                connection.inputStream.use { input -> contentResolver.openOutputStream(outputUri!!, "w")?.use { input.copyTo(it) } ?: error("파일 쓰기 오류") }
                 values.clear(); values.put(MediaStore.MediaColumns.IS_PENDING, 0); contentResolver.update(outputUri!!, values, null, null)
                 connection.disconnect()
                 runOnUiThread { toast("다운로드 완료: Download/HD MP3_Player") }
             } catch (error: Exception) {
                 outputUri?.let { contentResolver.delete(it, null, null) }
-                runOnUiThread { toast("다운로드 실패: " + (error.message ?: "네트워크 오류")) }
+                runOnUiThread {
+                    AlertDialog.Builder(this).setTitle("BBC 다운로드 실패")
+                        .setMessage((error.message ?: "네트워크 오류") + "\n\n인터넷 연결 후 다시 시도해 주세요.")
+                        .setPositiveButton("확인", null).show()
+                }
             }
         }.start()
+    }
+
+    private fun openBbcAudioConnection(source: String): HttpURLConnection {
+        var current = source
+        repeat(8) {
+            val connection = URL(current).openConnection() as HttpURLConnection
+            connection.instanceFollowRedirects = false
+            connection.connectTimeout = 15_000; connection.readTimeout = 30_000
+            connection.setRequestProperty("User-Agent", USER_AGENT)
+            val code = connection.responseCode
+            if (code !in 300..399) return connection
+            val location = connection.getHeaderField("Location") ?: error("BBC 리디렉션 주소 없음")
+            connection.disconnect()
+            current = URL(URL(current), location).toString().replaceFirst("http://", "https://")
+        }
+        error("BBC 리디렉션 횟수 초과")
     }
 
     private fun getDisplayName(uri: Uri): String {
