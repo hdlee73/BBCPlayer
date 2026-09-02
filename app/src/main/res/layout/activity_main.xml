@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="BBC 6 Minute English Player" android:textSize="24sp" android:textStyle="bold" />
+    <TextView android:id="@+id/fileName" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="MP3 파일을 선택하세요" />
+    <TextView android:id="@+id/timeText" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:gravity="center" android:text="00:00 / 00:00" />
+    <SeekBar android:id="@+id/seekBar" android:layout_width="match_parent" android:layout_height="wrap_content" />
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:orientation="horizontal">
+        <Button android:id="@+id/backButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-10초" />
+        <Button android:id="@+id/playButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="재생" />
+        <Button android:id="@+id/forwardButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="+10초" />
+    </LinearLayout>
+
+    <Spinner android:id="@+id/speedSpinner" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" />
+    <Button android:id="@+id/openButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="MP3 파일 열기" />
+</LinearLayout>
