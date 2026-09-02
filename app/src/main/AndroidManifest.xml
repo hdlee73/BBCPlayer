@@ -3,10 +3,9 @@
     <application
         android:allowBackup="true"
         android:label="HD MP3_Player"
+        android:resizeableActivity="true"
         android:theme="@style/Theme.BBCPlayer">
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
+        <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

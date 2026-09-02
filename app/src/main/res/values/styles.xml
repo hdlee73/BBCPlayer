@@ -7,4 +7,28 @@
         <item name="android:navigationBarColor">@color/navy_950</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
+    <style name="CompactControlButton" parent="Widget.Material3.Button">
+        <item name="android:layout_height">46dp</item>
+        <item name="android:backgroundTint">@color/surface_border</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:paddingLeft">2dp</item>
+        <item name="android:paddingRight">2dp</item>
+    </style>
+    <style name="CompactPrimaryButton" parent="CompactControlButton">
+        <item name="android:backgroundTint">@color/blue_500</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="CompactStatusText">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">5dp</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textSize">12sp</item>
+    </style>
 </resources>
