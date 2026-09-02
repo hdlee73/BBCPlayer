@@ -6,8 +6,7 @@
     android:fillViewport="true">
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center_vertical"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="14dp">
         <LinearLayout
@@ -100,12 +99,14 @@
                     android:id="@+id/speedSpinner"
                     style="@style/DarkSpinner"
                     android:layout_width="0dp"
+                    android:layout_marginStart="10dp"
                     android:layout_weight="1" />
-                <TextView style="@style/InlineLabel" android:layout_marginStart="8dp" android:text="이동" />
+                <TextView style="@style/InlineLabel" android:layout_marginStart="16dp" android:text="이동" />
                 <Spinner
                     android:id="@+id/seekStepSpinner"
                     style="@style/DarkSpinner"
                     android:layout_width="0dp"
+                    android:layout_marginStart="10dp"
                     android:layout_weight="1" />
             </LinearLayout>
             <LinearLayout
@@ -131,24 +132,36 @@
             </LinearLayout>
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="39dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-                <TextView style="@style/SectionLabel" android:text="즐겨찾기" />
-                <TextView
-                    android:id="@+id/bookmarkStatus"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:ellipsize="end"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:orientation="vertical">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="30dp"
                     android:gravity="center_vertical"
-                    android:maxLines="1"
-                    android:text="1 --:--  2 --:--  3 --:--"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="10sp" />
-                <Button android:id="@+id/bookmark1Button" style="@style/MiniButton" android:contentDescription="북마크 1, 길게 눌러 저장" android:text="①" />
-                <Button android:id="@+id/bookmark2Button" style="@style/MiniButton" android:layout_marginStart="4dp" android:contentDescription="북마크 2, 길게 눌러 저장" android:text="②" />
-                <Button android:id="@+id/bookmark3Button" style="@style/MiniButton" android:layout_marginStart="4dp" android:contentDescription="북마크 3, 길게 눌러 저장" android:text="③" />
+                    android:orientation="horizontal">
+                    <TextView style="@style/SectionLabel" android:text="즐겨찾기" />
+                    <TextView
+                        android:id="@+id/bookmarkStatus"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="10dp"
+                        android:layout_weight="1"
+                        android:gravity="center_vertical"
+                        android:maxLines="1"
+                        android:text="1 --:--   2 --:--   3 --:--"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="10sp" />
+                </LinearLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="38dp"
+                    android:gravity="end|center_vertical"
+                    android:orientation="horizontal">
+                    <Button android:id="@+id/bookmark1Button" style="@style/MiniButton" android:contentDescription="즐겨찾기 1, 길게 눌러 저장 또는 해제" android:text="①" />
+                    <Button android:id="@+id/bookmark2Button" style="@style/MiniButton" android:layout_marginStart="8dp" android:contentDescription="즐겨찾기 2, 길게 눌러 저장 또는 해제" android:text="②" />
+                    <Button android:id="@+id/bookmark3Button" style="@style/MiniButton" android:layout_marginStart="8dp" android:contentDescription="즐겨찾기 3, 길게 눌러 저장 또는 해제" android:text="③" />
+                </LinearLayout>
             </LinearLayout>
             <LinearLayout
                 android:layout_width="match_parent"
@@ -160,6 +173,7 @@
                     android:id="@+id/repeatModeSpinner"
                     style="@style/DarkSpinner"
                     android:layout_width="0dp"
+                    android:layout_marginStart="10dp"
                     android:layout_weight="1.35" />
                 <Spinner
                     android:id="@+id/repeatCountSpinner"

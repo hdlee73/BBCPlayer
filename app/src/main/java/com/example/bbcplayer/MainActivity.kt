@@ -148,10 +148,10 @@ class MainActivity : AppCompatActivity() {
             resetRepeatCounters()
             prefs.edit().putInt("repeat_mode", repeatMode).apply()
         }
-        val counts = listOf("1회", "3회", "5회", "10회", "∞")
-        val selectedCount = if (repeatLimit < 0) "∞" else repeatLimit.toString() + "회"
+        val counts = listOf("1회", "3회", "5회", "10회", "무제한")
+        val selectedCount = if (repeatLimit < 0) "무제한" else repeatLimit.toString() + "회"
         setSpinner(R.id.repeatCountSpinner, counts, selectedCount) { value ->
-            repeatLimit = if (value == "∞") -1 else value.removeSuffix("회").toInt()
+            repeatLimit = if (value == "무제한") -1 else value.removeSuffix("회").toInt()
             resetRepeatCounters()
             prefs.edit().putInt("repeat_limit", repeatLimit).apply()
         }
@@ -192,9 +192,12 @@ class MainActivity : AppCompatActivity() {
                 else toast((slot + 1).toString() + "번이 비어 있습니다. 길게 눌러 저장하세요.")
             }
             button.setOnLongClickListener {
-                bookmarks[slot] = player.currentPosition.coerceAtLeast(0)
+                val removing = bookmarks[slot] >= 0
+                bookmarks[slot] = if (removing) -1L else player.currentPosition.coerceAtLeast(0)
                 prefs.edit().putLong("bookmark_" + slot, bookmarks[slot]).apply()
-                updateLabels(); toast((slot + 1).toString() + "번 위치에 저장했습니다."); true
+                updateLabels()
+                toast((slot + 1).toString() + if (removing) "번 즐겨찾기를 해제했습니다." else "번 위치에 저장했습니다.")
+                true
             }
         }
     }
@@ -365,6 +368,7 @@ class MainActivity : AppCompatActivity() {
             seekBar.max = duration.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
             seekBar.progress = position.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
             seekBar.setRepeatRange(repeatStartMs, repeatEndMs, duration)
+            seekBar.setBookmarks(bookmarks, duration)
             timeText.text = formatTime(position) + " / " + formatTime(duration)
             handler.postDelayed(this, 250)
         }
