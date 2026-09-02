@@ -5,6 +5,7 @@ import android.content.ContentValues
 import android.content.res.ColorStateList
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -13,7 +14,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.provider.OpenableColumns
-import android.provider.DocumentsContract
+import androidx.core.content.ContextCompat
 import android.util.Xml
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
@@ -53,8 +54,8 @@ class MainActivity : AppCompatActivity() {
     private var repeatLimit = 1
     private var fileRepeatsDone = 0
 
-    private val openAudioFolder = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        uri?.let { openFolder(it, true) }
+    private val requestAudioPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) showFolderPicker() else toast("오디오 파일을 보려면 음악 접근 권한이 필요합니다.")
     }
 
     private fun openAudio(uri: Uri) {
@@ -65,37 +66,72 @@ class MainActivity : AppCompatActivity() {
         loadCurrent(0L)
     }
 
-    private fun openFolder(treeUri: Uri, showPicker: Boolean) {
-        try { contentResolver.takePersistableUriPermission(treeUri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-        catch (_: Exception) {}
-        val parentId = DocumentsContract.getTreeDocumentId(treeUri)
-        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentId)
-        val projection = arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME, DocumentsContract.Document.COLUMN_MIME_TYPE)
-        val found = mutableListOf<Pair<Uri, String>>()
-        contentResolver.query(childrenUri, projection, null, null, DocumentsContract.Document.COLUMN_DISPLAY_NAME)?.use { cursor ->
+    private fun audioPermission() = if (Build.VERSION.SDK_INT >= 33) android.Manifest.permission.READ_MEDIA_AUDIO else android.Manifest.permission.READ_EXTERNAL_STORAGE
+
+    private fun openAudioLibrary() {
+        val permission = audioPermission()
+        if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) showFolderPicker()
+        else requestAudioPermission.launch(permission)
+    }
+
+    private fun readAudioLibrary(): Map<String, List<Pair<Uri, String>>> {
+        val projection = mutableListOf(MediaStore.Audio.Media._ID, MediaStore.Audio.Media.DISPLAY_NAME)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) projection += MediaStore.Audio.Media.RELATIVE_PATH
+        else projection += MediaStore.Audio.Media.DATA
+        val groups = linkedMapOf<String, MutableList<Pair<Uri, String>>>()
+        contentResolver.query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, projection.toTypedArray(), null, null, MediaStore.Audio.Media.DISPLAY_NAME + " COLLATE NOCASE")?.use { cursor ->
             while (cursor.moveToNext()) {
-                val id = cursor.getString(0)
+                val id = cursor.getLong(0)
                 val name = cursor.getString(1) ?: "오디오"
-                val mime = cursor.getString(2) ?: ""
-                if (mime.startsWith("audio/") || name.endsWith(".mp3", true) || name.endsWith(".m4a", true)) {
-                    found += DocumentsContract.buildDocumentUriUsingTree(treeUri, id) to name
-                }
+                val rawPath = cursor.getString(2) ?: "기타"
+                val folder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) rawPath.trimEnd('/').ifBlank { "기타" }
+                else java.io.File(rawPath).parentFile?.name ?: "기타"
+                val uri = Uri.withAppendedPath(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id.toString())
+                groups.getOrPut(folder) { mutableListOf() }.add(uri to name)
             }
         }
-        if (found.isEmpty()) { toast("선택한 폴더에 오디오 파일이 없습니다."); return }
-        folderTracks.clear(); folderTracks.addAll(found.sortedBy { it.second.lowercase() })
-        prefs.edit().putString("folder_uri", treeUri.toString()).apply()
-        if (showPicker) {
-            AlertDialog.Builder(this).setTitle("재생할 오디오 선택")
-                .setItems(folderTracks.map { it.second }.toTypedArray()) { _, index ->
-                    currentTrackIndex = index
-                    openAudio(folderTracks[index].first)
-                }.setNegativeButton("취소", null).show()
-        } else {
-            val saved = prefs.getString("last_uri", null)
-            currentTrackIndex = folderTracks.indexOfFirst { it.first.toString() == saved }.coerceAtLeast(0)
-            currentUri = folderTracks[currentTrackIndex].first
+        return groups
+    }
+
+    private fun showFolderPicker() {
+        val library = readAudioLibrary()
+        if (library.isEmpty()) { toast("기기에서 오디오 파일을 찾지 못했습니다."); return }
+        val folders = library.keys.sorted()
+        AlertDialog.Builder(this)
+            .setTitle("🎧  오디오 폴더")
+            .setMessage("재생할 파일이 들어 있는 폴더를 선택하세요.")
+            .setItems(folders.toTypedArray()) { _, index -> showTrackPicker(folders[index], library.getValue(folders[index])) }
+            .setNegativeButton("취소", null).show()
+    }
+
+    private fun showTrackPicker(folder: String, tracks: List<Pair<Uri, String>>) {
+        var selected = 0
+        val labels = tracks.mapIndexed { index, track -> String.format("%02d   %s", index + 1, track.second) }.toTypedArray()
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("🎵  재생할 오디오")
+            .setMessage(folder + "  ·  " + tracks.size + "곡")
+            .setSingleChoiceItems(labels, selected) { _, index -> selected = index }
+            .setNegativeButton("취소", null)
+            .setPositiveButton("재생", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                folderTracks.clear(); folderTracks.addAll(tracks)
+                currentTrackIndex = selected
+                prefs.edit().putString("folder_path", folder).apply()
+                openAudio(folderTracks[selected].first)
+                dialog.dismiss()
+            }
         }
+        dialog.show()
+    }
+
+    private fun restoreFolder(folder: String) {
+        val tracks = readAudioLibrary()[folder] ?: return
+        folderTracks.clear(); folderTracks.addAll(tracks)
+        val saved = prefs.getString("last_uri", null)
+        currentTrackIndex = folderTracks.indexOfFirst { it.first.toString() == saved }.coerceAtLeast(0)
+        currentUri = folderTracks[currentTrackIndex].first
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -140,14 +176,16 @@ class MainActivity : AppCompatActivity() {
         repeatMode = prefs.getInt("repeat_mode", 0)
         repeatLimit = prefs.getInt("repeat_limit", 1)
         repeat(3) { bookmarks[it] = prefs.getLong("bookmark_" + it, -1L) }
-        prefs.getString("folder_uri", null)?.let { runCatching { openFolder(Uri.parse(it), false) } }
+        if (ContextCompat.checkSelfPermission(this, audioPermission()) == PackageManager.PERMISSION_GRANTED) {
+            prefs.getString("folder_path", null)?.let { runCatching { restoreFolder(it) } }
+        }
         if (currentUri == null) prefs.getString("last_uri", null)?.let { currentUri = Uri.parse(it) }
         updateLabels()
         updateSeekButtonLabels()
     }
 
     private fun configurePlaybackControls() {
-        findViewById<Button>(R.id.openButton).setOnClickListener { openAudioFolder.launch(null) }
+        findViewById<Button>(R.id.openButton).setOnClickListener { openAudioLibrary() }
         findViewById<Button>(R.id.previousTrackButton).setOnClickListener { moveTrack(-1) }
         findViewById<Button>(R.id.nextTrackButton).setOnClickListener { moveTrack(1) }
         playButton.setOnClickListener {
