@@ -8,7 +8,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="14dp">
+        android:paddingStart="14dp"
+        android:paddingTop="38dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="14dp">
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -26,7 +29,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_marginBottom="3dp"
-                android:text="(made by 이현덕)"
+                android:text="(made by LHD)"
                 android:textColor="@color/teal_600"
                 android:textSize="10sp"
                 android:textStyle="italic" />
@@ -94,20 +97,21 @@
                 android:layout_marginTop="3dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
-                <TextView style="@style/InlineLabel" android:text="속도" />
+                <TextView style="@style/InlineLabel" android:layout_width="32dp" android:text="속도" />
                 <Spinner
                     android:id="@+id/speedSpinner"
                     style="@style/DarkSpinner"
-                    android:layout_width="0dp"
-                    android:layout_marginStart="10dp"
-                    android:layout_weight="1" />
-                <TextView style="@style/InlineLabel" android:layout_marginStart="16dp" android:text="이동" />
+                    android:layout_width="68dp"
+                    android:layout_marginStart="4dp"
+                    android:dropDownWidth="88dp" />
+                <Space android:layout_width="8dp" android:layout_height="1dp" />
+                <TextView style="@style/InlineLabel" android:layout_width="32dp" android:text="이동" />
                 <Spinner
                     android:id="@+id/seekStepSpinner"
                     style="@style/DarkSpinner"
-                    android:layout_width="0dp"
-                    android:layout_marginStart="10dp"
-                    android:layout_weight="1" />
+                    android:layout_width="68dp"
+                    android:layout_marginStart="4dp"
+                    android:dropDownWidth="88dp" />
             </LinearLayout>
             <LinearLayout
                 android:layout_width="match_parent"
@@ -151,19 +155,19 @@
                 android:layout_height="42dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
-                <TextView style="@style/InlineLabel" android:text="재생 반복" />
+                <TextView style="@style/InlineLabel" android:layout_width="54dp" android:text="재생 반복" />
                 <Spinner
                     android:id="@+id/repeatModeSpinner"
                     style="@style/DarkSpinner"
-                    android:layout_width="0dp"
-                    android:layout_marginStart="10dp"
-                    android:layout_weight="1" />
+                    android:layout_width="72dp"
+                    android:layout_marginStart="4dp"
+                    android:dropDownWidth="92dp" />
                 <Spinner
                     android:id="@+id/repeatCountSpinner"
                     style="@style/DarkSpinner"
-                    android:layout_width="72dp"
-                    android:layout_marginStart="6dp"
-                    android:dropDownWidth="wrap_content" />
+                    android:layout_width="84dp"
+                    android:layout_marginStart="4dp"
+                    android:dropDownWidth="92dp" />
             </LinearLayout>
             <Button
                 android:id="@+id/openButton"

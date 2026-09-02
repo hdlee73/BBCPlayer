@@ -4,9 +4,11 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@android:color/white"
-    android:gravity="center_vertical"
+    android:gravity="center"
     android:minHeight="40dp"
-    android:paddingHorizontal="6dp"
+    android:paddingStart="3dp"
+    android:paddingEnd="18dp"
+    android:singleLine="true"
     android:textColor="@color/text_primary"
-    android:textSize="12sp" />
+    android:textSize="11sp" />
 
