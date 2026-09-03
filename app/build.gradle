@@ -4,14 +4,14 @@ plugins {
 
 android {
     namespace 'com.example.bbcplayer'
-    compileSdk 34
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.example.bbcplayer"
         minSdk 26
-        targetSdk 34
+        targetSdk 36
         versionCode 1
-        versionName "0.1"
+        versionName "1.0.0"
     }
 
     compileOptions {
@@ -26,3 +26,4 @@ dependencies {
     implementation 'com.google.android.material:material:1.9.0'
     implementation 'androidx.media3:media3-exoplayer:1.1.1'
 }
+
