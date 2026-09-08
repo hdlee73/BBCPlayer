@@ -164,7 +164,7 @@ class MainActivity : AppCompatActivity() {
             }
             else -> if (currentUri != null) loadCurrent(prefs.getLong("last_position", 0L))
         }
-        if (action == ACTION_PICK_DRIVE || action == ACTION_RESUME_LAST) source.action = Intent.ACTION_MAIN
+        if (action == ACTION_PICK_DRIVE || action == ACTION_RESUME_LAST) source?.action = Intent.ACTION_MAIN
     }
 
     private fun bindViews() {
