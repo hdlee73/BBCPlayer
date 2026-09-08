@@ -1,21 +1,16 @@
 package com.example.bbcplayer
 
-import android.app.DownloadManager
-import android.content.ContentValues
 import android.content.res.ColorStateList
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import androidx.core.content.ContextCompat
-import android.util.Xml
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -24,11 +19,6 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import org.xmlpull.v1.XmlPullParser
-import java.net.HttpURLConnection
-import java.net.URL
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     private lateinit var player: ExoPlayer
@@ -58,13 +48,22 @@ class MainActivity : AppCompatActivity() {
         if (granted) showFolderPicker() else toast("오디오 파일을 보려면 음악 접근 권한이 필요합니다.")
     }
 
-    private fun openAudio(uri: Uri) {
+    private val openDriveAudio = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri ?: return@registerForActivityResult
+        folderTracks.clear()
+        currentTrackIndex = 0
+        openAudio(uri, autoPlay = true)
+    }
+
+    private fun openAudio(uri: Uri, autoPlay: Boolean = true) {
         try { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
         catch (_: Exception) {}
         currentUri = uri
         clearFileLearningState()
-        loadCurrent(0L)
+        loadCurrent(0L, autoPlay)
     }
+
+    private fun openGoogleDrive() = openDriveAudio.launch(arrayOf("audio/mpeg", "audio/mp3", "audio/*"))
 
     private fun audioPermission() = if (Build.VERSION.SDK_INT >= 33) android.Manifest.permission.READ_MEDIA_AUDIO else android.Manifest.permission.READ_EXTERNAL_STORAGE
 
@@ -104,24 +103,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showTrackPicker(folder: String, tracks: List<Pair<Uri, String>>) {
-        var selected = 0
         val labels = tracks.mapIndexed { index, track -> String.format("%02d   %s", index + 1, track.second) }.toTypedArray()
-        val dialog = AlertDialog.Builder(this)
+        AlertDialog.Builder(this)
             .setTitle("🎵  " + folder + "  ·  " + tracks.size + "곡")
-            .setSingleChoiceItems(labels, selected) { _, index -> selected = index }
-            .setNegativeButton("취소", null)
-            .setPositiveButton("재생", null)
-            .create()
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            .setItems(labels) { dialog, index ->
                 folderTracks.clear(); folderTracks.addAll(tracks)
-                currentTrackIndex = selected
+                currentTrackIndex = index
                 prefs.edit().putString("folder_path", folder).apply()
-                openAudio(folderTracks[selected].first)
+                openAudio(folderTracks[index].first, autoPlay = true)
                 dialog.dismiss()
             }
-        }
-        dialog.show()
+            .setNegativeButton("취소", null)
+            .show()
     }
 
     private fun restoreFolder(folder: String) {
@@ -142,8 +135,6 @@ class MainActivity : AppCompatActivity() {
         configureSpinners()
         configureRepeatRangeControls()
         configureBookmarks()
-        findViewById<Button>(R.id.bbcButton).setOnClickListener { fetchLatestBbcEpisode() }
-        if (currentUri != null) loadCurrent(prefs.getLong("last_position", 0L))
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 playButton.text = if (isPlaying) "일시정지" else "재생"
@@ -152,7 +143,28 @@ class MainActivity : AppCompatActivity() {
                 if (state == Player.STATE_ENDED) handlePlaybackEnded()
             }
         })
+        handleLaunchAction(intent)
         handler.post(progressUpdater)
+        PlayerWidgetProvider.updateAll(this)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleLaunchAction(intent)
+    }
+
+    private fun handleLaunchAction(source: Intent?) {
+        val action = source?.action
+        when (action) {
+            ACTION_PICK_DRIVE -> handler.post { openGoogleDrive() }
+            ACTION_RESUME_LAST -> {
+                if (currentUri == null) handler.post { openGoogleDrive() }
+                else loadCurrent(prefs.getLong("last_position", 0L), autoPlay = true)
+            }
+            else -> if (currentUri != null) loadCurrent(prefs.getLong("last_position", 0L))
+        }
+        if (action == ACTION_PICK_DRIVE || action == ACTION_RESUME_LAST) source.action = Intent.ACTION_MAIN
     }
 
     private fun bindViews() {
@@ -184,6 +196,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun configurePlaybackControls() {
         findViewById<Button>(R.id.openButton).setOnClickListener { openAudioLibrary() }
+        findViewById<Button>(R.id.driveButton).setOnClickListener { openGoogleDrive() }
         findViewById<Button>(R.id.previousTrackButton).setOnClickListener { moveTrack(-1) }
         findViewById<Button>(R.id.nextTrackButton).setOnClickListener { moveTrack(1) }
         playButton.setOnClickListener {
@@ -304,8 +317,10 @@ class MainActivity : AppCompatActivity() {
         val uri = currentUri ?: return
         player.setMediaItem(MediaItem.fromUri(uri)); player.prepare(); player.seekTo(position)
         if (autoPlay) player.play()
-        fileName.text = getDisplayName(uri)
-        prefs.edit().putString("last_uri", uri.toString()).apply()
+        val displayName = getDisplayName(uri)
+        fileName.text = displayName
+        prefs.edit().putString("last_uri", uri.toString()).putString("last_name", displayName).apply()
+        PlayerWidgetProvider.updateAll(this)
         updateLabels()
     }
 
@@ -344,109 +359,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun fetchLatestBbcEpisode() {
-        toast("BBC 최신 회차를 확인하고 있습니다.")
-        Thread {
-            try {
-                val connection = URL(BBC_FEED).openConnection() as HttpURLConnection
-                connection.connectTimeout = 10_000; connection.readTimeout = 15_000
-                connection.setRequestProperty("User-Agent", USER_AGENT)
-                val parser = Xml.newPullParser()
-                val episode = connection.inputStream.use { parser.setInput(it, "UTF-8"); parseFirstEpisode(parser) }
-                connection.disconnect()
-                runOnUiThread { showLatestEpisode(episode) }
-            } catch (_: Exception) { runOnUiThread { toast("BBC 정보를 불러오지 못했습니다.") } }
-        }.start()
-    }
-
-    private fun parseFirstEpisode(parser: XmlPullParser): BbcEpisode {
-        var inItem = false; var title = ""; var audioUrl = ""; var published = ""
-        while (parser.eventType != XmlPullParser.END_DOCUMENT) {
-            if (parser.eventType == XmlPullParser.START_TAG) when (parser.name) {
-                "item" -> inItem = true
-                "title" -> if (inItem) title = parser.nextText()
-                "pubDate" -> if (inItem) published = parser.nextText()
-                "enclosure" -> if (inItem) audioUrl = parser.getAttributeValue(null, "url") ?: ""
-            } else if (parser.eventType == XmlPullParser.END_TAG && parser.name == "item" && inItem) break
-            parser.next()
-        }
-        if (title.isBlank() || audioUrl.isBlank()) error("No episode")
-        val inputDate = SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.US).parse(published)
-            ?: error("게시일 없음")
-        val date = SimpleDateFormat("yyyyMMdd", Locale.US).format(inputDate)
-        return BbcEpisode(title, audioUrl.replaceFirst("http://", "https://"), date)
-    }
-
-    private fun showLatestEpisode(episode: BbcEpisode) {
-        AlertDialog.Builder(this).setTitle("BBC 6 Minute English")
-            .setMessage("최신 회차\n\n" + episode.title).setNegativeButton("취소", null)
-            .setPositiveButton("MP3 다운로드") { _, _ -> downloadEpisode(episode) }.show()
-    }
-
-    private fun downloadEpisode(episode: BbcEpisode) {
-        val title = episode.title.replace(Regex("[^A-Za-z0-9가-힣 _-]"), "").trim().take(80).ifBlank { "BBC_6_Minute_English" }
-        val fileName = episode.publishedDate + "_" + title + ".mp3"
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) downloadToMediaStore(episode, fileName)
-        else {
-            val request = DownloadManager.Request(Uri.parse(episode.audioUrl)).setTitle(episode.title)
-                .setMimeType("audio/mpeg").setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
-            (getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
-            toast("다운로드를 시작했습니다.")
-        }
-    }
-
-    private fun downloadToMediaStore(episode: BbcEpisode, fileName: String) {
-        toast("MP3를 다운로드하고 있습니다.")
-        Thread {
-            var outputUri: Uri? = null
-            try {
-                val values = ContentValues().apply {
-                    put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                    put(MediaStore.MediaColumns.MIME_TYPE, "audio/mpeg")
-                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                    put(MediaStore.MediaColumns.IS_PENDING, 1)
-                }
-                outputUri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: error("저장 위치 오류")
-                val connection = openBbcAudioConnection(episode.audioUrl)
-                if (connection.responseCode !in 200..299) error("HTTP " + connection.responseCode)
-                connection.inputStream.use { input -> contentResolver.openOutputStream(outputUri!!, "w")?.use { input.copyTo(it) } ?: error("파일 쓰기 오류") }
-                values.clear(); values.put(MediaStore.MediaColumns.IS_PENDING, 0); contentResolver.update(outputUri!!, values, null, null)
-                connection.disconnect()
-                runOnUiThread { toast("다운로드 완료: Download/" + fileName) }
-            } catch (error: Exception) {
-                outputUri?.let { contentResolver.delete(it, null, null) }
-                runOnUiThread {
-                    AlertDialog.Builder(this).setTitle("BBC 다운로드 실패")
-                        .setMessage((error.message ?: "네트워크 오류") + "\n\n인터넷 연결 후 다시 시도해 주세요.")
-                        .setPositiveButton("확인", null).show()
-                }
-            }
-        }.start()
-    }
-
-    private fun openBbcAudioConnection(source: String): HttpURLConnection {
-        var current = source
-        repeat(8) {
-            val connection = URL(current).openConnection() as HttpURLConnection
-            connection.instanceFollowRedirects = false
-            connection.connectTimeout = 15_000; connection.readTimeout = 30_000
-            connection.setRequestProperty("User-Agent", USER_AGENT)
-            val code = connection.responseCode
-            if (code !in 300..399) return connection
-            val location = connection.getHeaderField("Location") ?: error("BBC 리디렉션 주소 없음")
-            connection.disconnect()
-            current = URL(URL(current), location).toString().replaceFirst("http://", "https://")
-        }
-        error("BBC 리디렉션 횟수 초과")
-    }
-
     private fun getDisplayName(uri: Uri): String {
-        contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-            val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-            if (index >= 0 && cursor.moveToFirst()) return cursor.getString(index)
-        }
-        return "선택한 오디오"
+        return runCatching {
+            contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (index >= 0 && cursor.moveToFirst()) cursor.getString(index) else null
+            }
+        }.getOrNull()?.takeIf { it.isNotBlank() }
+            ?: uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
+            ?: "선택한 오디오"
     }
 
     private val progressUpdater = object : Runnable {
@@ -481,10 +402,8 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() { handler.removeCallbacks(progressUpdater); player.release(); super.onDestroy() }
 
     companion object {
-        private const val BBC_FEED = "https://podcasts.files.bbci.co.uk/p02pc9tn.rss"
-        private const val USER_AGENT = "HD-MP3-Player/1.0"
+        const val ACTION_PICK_DRIVE = "com.example.bbcplayer.action.PICK_DRIVE"
+        const val ACTION_RESUME_LAST = "com.example.bbcplayer.action.RESUME_LAST"
     }
 }
-
-private data class BbcEpisode(val title: String, val audioUrl: String, val publishedDate: String)
 

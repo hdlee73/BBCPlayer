@@ -6,12 +6,13 @@
     android:fillViewport="true">
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
+        android:gravity="center_vertical"
         android:orientation="vertical"
-        android:paddingStart="14dp"
-        android:paddingTop="28dp"
-        android:paddingEnd="14dp"
-        android:paddingBottom="14dp">
+        android:paddingStart="18dp"
+        android:paddingTop="22dp"
+        android:paddingEnd="18dp"
+        android:paddingBottom="22dp">
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -185,20 +186,21 @@
                     android:layout_marginStart="4dp" />
             </LinearLayout>
             <Button
-                android:id="@+id/openButton"
+                android:id="@+id/driveButton"
                 style="@style/CompactPrimaryButton"
                 android:layout_width="match_parent"
                 android:layout_height="50dp"
-                android:layout_marginTop="6dp"
-                android:text="오디오 폴더 열기"
+                android:layout_marginTop="10dp"
+                android:text="Google Drive에서 MP3 선택"
                 android:textSize="14sp" />
             <Button
-                android:id="@+id/bbcButton"
-                style="@style/BbcLinkButton"
-                android:layout_width="wrap_content"
-                android:layout_height="42dp"
-                android:layout_gravity="end"
-                android:text="BBC 최신 6 Minute English 받기  ›" />
+                android:id="@+id/openButton"
+                style="@style/SecondaryButton"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:layout_marginTop="8dp"
+                android:text="기기 오디오 폴더 선택"
+                android:textSize="13sp" />
         </LinearLayout>
     </LinearLayout>
 </ScrollView>

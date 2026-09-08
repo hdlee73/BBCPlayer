@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MP3 Player</string>
+    <string name="widget_description">최근 MP3를 이어 듣거나 Google Drive에서 선택합니다.</string>
+    <string name="widget_no_audio">MP3를 선택해 주세요</string>
+    <string name="widget_resume">▶ 이어듣기</string>
+    <string name="widget_drive">Drive에서 선택</string>
+</resources>
