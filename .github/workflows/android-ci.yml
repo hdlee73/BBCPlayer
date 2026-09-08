@@ -24,7 +24,8 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v5
       - name: Prepare Android SDK
-        run: |\n          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
       - name: Lint and build APK
         run: ./gradlew :app:lintDebug :app:assembleDebug
       - name: Upload APK
