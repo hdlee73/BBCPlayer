@@ -6,7 +6,7 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: android-build-${{ github.ref }}
@@ -34,3 +34,17 @@ jobs:
           name: BBCPlayer-1.2.0-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+      - name: Publish versioned APK to Releases
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(sed -n 's/.*versionName "\([^"]*\)".*/\1/p' app/build.gradle)
+          TAG="v$VERSION"
+          APK="BBCPlayer-$TAG-debug.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "$APK"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; leaving it unchanged."
+          else
+            gh release create "$TAG" "$APK" --target "$GITHUB_SHA" --title "BBCPlayer $TAG" --notes "Background playback reliability update."
+          fi
