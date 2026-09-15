@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
+import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -19,7 +20,7 @@ import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 
 /** Keeps audio playback alive when the Activity is stopped, folded, or recreated. */
-@UnstableApi
+@OptIn(markerClass = [UnstableApi::class])
 class PlaybackService : Service() {
     inner class LocalBinder : Binder() {
         fun getService(): PlaybackService = this@PlaybackService
