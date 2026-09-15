@@ -14,10 +14,12 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 
 /** Keeps audio playback alive when the Activity is stopped, folded, or recreated. */
+@UnstableApi
 class PlaybackService : Service() {
     inner class LocalBinder : Binder() {
         fun getService(): PlaybackService = this@PlaybackService
