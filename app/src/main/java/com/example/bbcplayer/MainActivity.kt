@@ -2,6 +2,9 @@ package com.example.bbcplayer
 
 import android.content.res.ColorStateList
 import android.content.Intent
+import android.content.ComponentName
+import android.content.Context
+import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -22,6 +25,8 @@ import androidx.media3.exoplayer.ExoPlayer
 
 class MainActivity : AppCompatActivity() {
     private lateinit var player: ExoPlayer
+    private var playbackService: PlaybackService? = null
+    private var playerReady = false
     private lateinit var playButton: Button
     private lateinit var backButton: Button
     private lateinit var forwardButton: Button
@@ -128,8 +133,30 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        player = ExoPlayer.Builder(this).build()
         bindViews()
+        setPlayerControlsEnabled(false)
+        bindService(Intent(this, PlaybackService::class.java), serviceConnection, Context.BIND_AUTO_CREATE)
+        PlayerWidgetProvider.updateAll(this)
+    }
+
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, binder: android.os.IBinder?) {
+            val service = (binder as PlaybackService.LocalBinder).getService()
+            playbackService = service
+            player = service.player
+            initializePlayerUi()
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            playbackService = null
+            playerReady = false
+            setPlayerControlsEnabled(false)
+        }
+    }
+
+    private fun initializePlayerUi() {
+        if (playerReady) return
+        playerReady = true
         restoreState()
         configurePlaybackControls()
         configureSpinners()
@@ -143,9 +170,15 @@ class MainActivity : AppCompatActivity() {
                 if (state == Player.STATE_ENDED) handlePlaybackEnded()
             }
         })
+        setPlayerControlsEnabled(true)
         handleLaunchAction(intent)
         handler.post(progressUpdater)
-        PlayerWidgetProvider.updateAll(this)
+    }
+
+    private fun setPlayerControlsEnabled(enabled: Boolean) {
+        listOf(R.id.playButton, R.id.backButton, R.id.forwardButton).forEach {
+            findViewById<Button>(it).isEnabled = enabled
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -200,8 +233,14 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.previousTrackButton).setOnClickListener { moveTrack(-1) }
         findViewById<Button>(R.id.nextTrackButton).setOnClickListener { moveTrack(1) }
         playButton.setOnClickListener {
-            if (currentUri == null) toast("먼저 오디오 파일을 열어 주세요.")
-            else if (player.isPlaying) player.pause() else player.play()
+            when {
+                currentUri == null -> toast("먼저 오디오 파일을 열어 주세요.")
+                player.isPlaying -> player.pause()
+                else -> {
+                    startPlaybackService()
+                    player.play()
+                }
+            }
         }
         backButton.setOnClickListener { player.seekTo((player.currentPosition - seekStepMs).coerceAtLeast(0)) }
         forwardButton.setOnClickListener {
@@ -315,6 +354,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadCurrent(position: Long, autoPlay: Boolean = false) {
         val uri = currentUri ?: return
+        if (autoPlay) startPlaybackService()
         player.setMediaItem(MediaItem.fromUri(uri)); player.prepare(); player.seekTo(position)
         if (autoPlay) player.play()
         val displayName = getDisplayName(uri)
@@ -322,6 +362,11 @@ class MainActivity : AppCompatActivity() {
         prefs.edit().putString("last_uri", uri.toString()).putString("last_name", displayName).apply()
         PlayerWidgetProvider.updateAll(this)
         updateLabels()
+    }
+
+    private fun startPlaybackService() {
+        ContextCompat.startForegroundService(this, Intent(this, PlaybackService::class.java))
+        playbackService?.keepAlive()
     }
 
     private fun clearFileLearningState() {
@@ -396,14 +441,17 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        if (::player.isInitialized) prefs.edit().putLong("last_position", player.currentPosition).apply()
+        if (playerReady) prefs.edit().putLong("last_position", player.currentPosition).apply()
     }
 
-    override fun onDestroy() { handler.removeCallbacks(progressUpdater); player.release(); super.onDestroy() }
+    override fun onDestroy() {
+        handler.removeCallbacks(progressUpdater)
+        if (playbackService != null) unbindService(serviceConnection)
+        super.onDestroy()
+    }
 
     companion object {
         const val ACTION_PICK_DRIVE = "com.example.bbcplayer.action.PICK_DRIVE"
         const val ACTION_RESUME_LAST = "com.example.bbcplayer.action.RESUME_LAST"
     }
 }
-
