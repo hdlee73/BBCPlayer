@@ -184,7 +184,7 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleLaunchAction(intent)
+        if (playerReady) handleLaunchAction(intent)
     }
 
     private fun handleLaunchAction(source: Intent?) {
