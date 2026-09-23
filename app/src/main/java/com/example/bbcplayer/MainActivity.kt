@@ -190,6 +190,11 @@ class MainActivity : AppCompatActivity() {
     private fun handleLaunchAction(source: Intent?) {
         val action = source?.action
         when (action) {
+            Intent.ACTION_VIEW -> {
+                val audioUri = source.data
+                if (audioUri != null) openAudio(audioUri, autoPlay = true)
+                else toast("오디오 파일을 열 수 없습니다.")
+            }
             ACTION_PICK_DRIVE -> handler.post { openGoogleDrive() }
             ACTION_RESUME_LAST -> {
                 if (currentUri == null) handler.post { openGoogleDrive() }
@@ -197,7 +202,11 @@ class MainActivity : AppCompatActivity() {
             }
             else -> if (currentUri != null) loadCurrent(prefs.getLong("last_position", 0L))
         }
-        if (action == ACTION_PICK_DRIVE || action == ACTION_RESUME_LAST) source?.action = Intent.ACTION_MAIN
+        if (action == Intent.ACTION_VIEW || action == ACTION_PICK_DRIVE || action == ACTION_RESUME_LAST) {
+            // Do not reopen the same externally supplied file after a configuration
+            // change or when the activity is brought back to the foreground.
+            source?.action = Intent.ACTION_MAIN
+        }
     }
 
     private fun bindViews() {
