@@ -31,7 +31,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: BBCPlayer-1.2.0-debug
+          name: BBCPlayer-1.2.1-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
       - name: Publish versioned APK to Releases
@@ -46,5 +46,5 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG already exists; leaving it unchanged."
           else
-            gh release create "$TAG" "$APK" --target "$GITHUB_SHA" --title "BBCPlayer $TAG" --notes "Background playback reliability update."
+            gh release create "$TAG" "$APK" --target "$GITHUB_SHA" --title "BBCPlayer $TAG" --notes "Adds Android Open with support so BBCPlayer can be selected as the default app for audio files."
           fi
